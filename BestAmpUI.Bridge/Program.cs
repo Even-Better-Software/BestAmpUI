@@ -5,7 +5,7 @@ using System.Net.WebSockets;
 const int KEEP_ALIVE_INTERVAL = 30;
 
 // this should be the address where the client is reachable
-const string ALLOWED_ORIGIN = "http://127.0.0.1:7082";
+// const string ALLOWED_ORIGIN = "http://127.0.0.1:7082"; // one day i will have the patience to figure out CORS
 
 // this should be the address where the bridge is reachable
 const string BRIDGE_ADDRESS = "http://127.0.0.1:7081";
@@ -21,7 +21,7 @@ WebApplication app = builder.Build();
 WebSocketOptions sockOptions = new()
 {
     KeepAliveInterval = TimeSpan.FromSeconds(KEEP_ALIVE_INTERVAL),
-    AllowedOrigins = {ALLOWED_ORIGIN},
+    // AllowedOrigins = {ALLOWED_ORIGIN},
 };
 app.UseWebSockets(sockOptions);
 
