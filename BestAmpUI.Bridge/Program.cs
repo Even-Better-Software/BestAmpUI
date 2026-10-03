@@ -25,18 +25,24 @@ WebSocketOptions sockOptions = new()
 };
 app.UseWebSockets(sockOptions);
 
+Console.WriteLine("Bridge program starting");
 app.Map("/backend", async context =>
 {
+    Console.WriteLine("Request received.");
     if (!context.WebSockets.IsWebSocketRequest)
     {
+        Console.WriteLine("Not a web socket request.");
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         return;
     }
 
     using WebSocket sock = await context.WebSockets.AcceptWebSocketAsync();
+    Console.WriteLine("Web socket established successfully.");
 
     using TcpClient tcp = new() {NoDelay = true};
     await tcp.ConnectAsync(IPAddress.Loopback, TCP_PORT, context.RequestAborted);
+    Console.WriteLine("Connected to TCP Server.");
+
     using NetworkStream tcpStream = tcp.GetStream();
 
     using CancellationTokenSource cancelTokenSrc = 
@@ -51,7 +57,7 @@ app.Map("/backend", async context =>
     catch (OperationCanceledException)
     {
         // this happens on a disconnect
-        Console.Out.WriteLine("Connection disconnected normally.");
+        Console.Out.WriteLine("Connection closed cleanly.");
     }
     finally
     {
@@ -89,22 +95,22 @@ static async Task ForwardTcpToBrowserAsync(
     byte[] buffer = new byte[BUFFER_SIZE];
     while (sock.State == WebSocketState.Open)
     {
-        WebSocketReceiveResult result = await sock.ReceiveAsync(
-            buffer, cancelToken
-        );
+        int count = await tcpStream.ReadAsync(buffer, cancelToken);
+        Console.WriteLine("Read from tcp stream.");
 
-        if (result.MessageType == WebSocketMessageType.Close)
+        if (count == 0)
         {
+            // tcp packet with 0 length --> close connection
             return;
         }
 
-        if (result.MessageType != WebSocketMessageType.Binary)
-        {
-            // ignore messages not with binary format
-            continue;
-        }
-
-        await tcpStream.WriteAsync(buffer.AsMemory(0, result.Count), cancelToken);
+        await sock.SendAsync(
+            buffer.AsMemory(0, count), 
+            WebSocketMessageType.Binary,
+            endOfMessage: true,
+            cancelToken
+        );
+        Console.WriteLine("Sent data through web socket.");
     }
 }
 
@@ -119,19 +125,23 @@ static async Task ForwardBrowserToTcpAsync(
     byte[] buffer = new byte[BUFFER_SIZE];
     while (sock.State == WebSocketState.Open)
     {
-        int count = await tcpStream.ReadAsync(buffer, cancelToken);
+        WebSocketReceiveResult result = await sock.ReceiveAsync(
+            buffer, cancelToken
+        );
+        Console.WriteLine("Received some web socket data.");
 
-        if (count == 0)
+        if (result.MessageType == WebSocketMessageType.Close)
         {
-            // tcp packet with 0 length --> close connection
             return;
         }
 
-        await sock.SendAsync(
-            buffer.AsMemory(0, count), 
-            WebSocketMessageType.Binary,
-            endOfMessage: true,
-            cancelToken
-        );
+        if (result.MessageType != WebSocketMessageType.Binary)
+        {
+            // ignore messages not with binary format
+            continue;
+        }
+
+        await tcpStream.WriteAsync(buffer.AsMemory(0, result.Count), cancelToken);
+        Console.WriteLine("Wrote to TCP stream.");
     }
 }
