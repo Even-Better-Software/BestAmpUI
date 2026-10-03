@@ -8,7 +8,7 @@ const int KEEP_ALIVE_INTERVAL = 30;
 const string ALLOWED_ORIGIN = "http://127.0.0.1:7082";
 
 // this should be the address where the bridge is reachable
-const string LISTENING_ADDRESS = "http:/127.0.0.1:7081";
+const string BRIDGE_ADDRESS = "http://127.0.0.1:7081";
 
 // this should be the port where TCP communication happens
 const int TCP_PORT = 7080;
@@ -72,7 +72,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapFallbackToFile("index.html");
-app.Run(LISTENING_ADDRESS);
+app.Run(BRIDGE_ADDRESS);
 
 app.MapGet("/", () => "Hello World!");
 
