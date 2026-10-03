@@ -78,6 +78,9 @@ app.MapGet("/", () => "Hello World!");
 
 app.Run();
 
+/**
+ * Listens for TCP traffic. Forwards it to the WebSocket connection.
+ */
 static async Task ForwardTcpToBrowserAsync(
     NetworkStream tcpStream, 
     WebSocket sock, 
@@ -89,15 +92,46 @@ static async Task ForwardTcpToBrowserAsync(
         WebSocketReceiveResult result = await sock.ReceiveAsync(
             buffer, cancelToken
         );
-    }
 
-    //TODO
+        if (result.MessageType == WebSocketMessageType.Close)
+        {
+            return;
+        }
+
+        if (result.MessageType != WebSocketMessageType.Binary)
+        {
+            // ignore messages not with binary format
+            continue;
+        }
+
+        await tcpStream.WriteAsync(buffer.AsMemory(0, result.Count), cancelToken);
+    }
 }
 
+/**
+ * Listens for WebSocket traffic. Forwards it to the TCP connection.
+ */
 static async Task ForwardBrowserToTcpAsync(
     WebSocket sock, 
     NetworkStream tcpStream, 
     CancellationToken cancelToken)
 {
-    //TODO
+    byte[] buffer = new byte[BUFFER_SIZE];
+    while (sock.State == WebSocketState.Open)
+    {
+        int count = await tcpStream.ReadAsync(buffer, cancelToken);
+
+        if (count == 0)
+        {
+            // tcp packet with 0 length --> close connection
+            return;
+        }
+
+        await sock.SendAsync(
+            buffer.AsMemory(0, count), 
+            WebSocketMessageType.Binary,
+            endOfMessage: true,
+            cancelToken
+        );
+    }
 }
