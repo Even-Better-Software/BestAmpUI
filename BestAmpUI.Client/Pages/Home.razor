@@ -1,7 +1,60 @@
 ﻿@page "/"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<PageTitle>Home</PageTitle>
+<h1>BestAmp</h1>
 
-<h1>Hello, world!</h1>
+<button @onclick="SendBytes">Send Data</button>
 
-Welcome to your new app.
+<p>Status: @Status</p>
+
+@code {
+    // must be disposed of properly later
+    private DotNetObjectReference<Home>? callback;
+
+    private string Status = "Disconnected";
+
+    private const string JSFUNC_CONNECT = "tcpClient.connect";
+    private const string JSFUNC_SEND = "tcpClient.send";
+    private const string JSFUNC_CLOSE = "tcpClient.close";
+    private const string BRIDGE_ENDPOINT = "ws://127.0.0.1:7081/backend";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        callback = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
+
+        Status = "Connecting";
+        StateHasChanged();
+    }
+
+    private async Task SendBytes()
+    {
+        byte[] testData = { 0x01, 0x02, 0x03 };
+
+        await JS.InvokeVoidAsync(JSFUNC_SEND, testData);
+    }
+
+    [JSInvokable]
+    public Task OnTcpMessage(int[] values)
+    {
+        byte[] message = values
+            .Select(value => (byte)value)
+            .ToArray();
+
+        Status = $"Received {message.Length} bytes";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await JS.InvokeVoidAsync(JSFUNC_CLOSE);
+        callback?.Dispose();
+    }
+}
