@@ -1,44 +1,229 @@
 ﻿@page "/"
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@using BestAmpUI.Client.Models
 
-<h1>BestAmp</h1>
+<main>
+    <header>
+        <h1>BestAmp Control Interface</h1>
 
-<button @onclick="SendBytes">Send Data</button>
+        <div class="control-row">
+            @foreach (DialKnob dial in DialKnobs)
+            {
+                <div class="control-item">
+                    <span class="control-label">@dial.Label</span>
+                    <span class="control-input">
+                        <img src="@DIAL_ICON" alt="Dial" />
+                        <input type="number" step="any" @bind="dial.Value" />
+                    </span>
+                </div>
+            }
 
-<p>Status: @Status</p>
+            <div class="control-item">
+                <span class="control-label">Settings</span>
+                <span class="control-input">
+                    <img src="@SETTINGS_ICON" alt="Settings" />
+                    @{string buttonLabel = IsSettingsOpen ? "^" : "v";}
+                    <input type="button" @onclick="ToggleSettings" value=@buttonLabel>
+                        @if (IsSettingsOpen) {<span>v</span>} else {<span>^</span>}
+                    </input>
+                </span>
+            </div>
+        </div>
+
+        @if (IsSettingsOpen)
+        {
+            <section class="settings-panel">
+                <div class="settings-row extend-to-end">
+                    <label for="host-api">Host API</label>
+                    <select id="hostApi" @bind="Settings.HostApi">
+                        <option value=""></option>
+                    </select>
+                </div>
+                <div class="settings-row extend-to-end">
+                    <label for="in-device">In Device</label>
+                    <select id="deviceIn" @bind="Settings.DeviceIn">
+                        <option value=""></option>
+                    </select>
+                    <label for="in-channel">In Channel Number</label>
+                    <input id="channelIn" type="number" @bind="Settings.ChannelIn" />
+                </div>
+                <div class="settings-row">
+                    <label for="out-device">Out device</label>
+                    <select id="deviceOut" @bind="Settings.DeviceOut">
+                        <option value=""></option>
+                    </select>
+                    <label for="out-channel">Out Channel Number</label>
+                    <input id="channelOut" type="number" @bind="Settings.ChannelOut" />
+                </div>
+                <div class="settings-row">
+                    <label for="sample-rate">Sample Rate (in Hz)</label>
+                    <input id="sampleRate" type="number" @bind="Settings.SampleRate" />
+                </div>
+                <div class="settings-row extend-to-end">
+                    <label for="frames-per-buffer">Frames per buffer</label>
+                    <input id="framesPerBuffer" type="number" @bind="Settings.FramesPerBuffer" />
+                </div>
+            </section>
+        }
+
+        @* <div>
+            <button type="button" @onclick="CaptureInputs">Capture Inputs</button>
+            @if (InputsCaptured)
+            {
+                <span role="status">Inputs captured.</span>
+            }
+        </div> *@
+
+        @* <div class="connection-status">
+            <span>Status: @Status</span>
+            <button type="button" @onclick="SendBytes">Send Data</button>
+        </div> *@
+    </header>
+
+    <section class="amplifier-workspace" aria-label="Amplifier workspace"></section>
+</main>
+
+<style>
+    main {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    header {
+        padding: 1rem 1.5rem;
+    }
+
+    h1 {
+        margin: 0 0 1rem;
+        text-align: center;
+    }
+
+    .control-row {
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        gap: clamp(0.5rem, 3vw, 2rem);
+    }
+
+    .control-item {
+        display: flex;
+        width: min(14vw, 7rem);
+        min-width: 3.5rem;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .control-label {
+        font-weight: 600;
+    }
+
+    .control-input {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .control-input img {
+        width: min(100%, 6rem);
+    }
+
+    .control-input input {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .settings-panel {
+        display: grid;
+        max-width: 60rem;
+        margin: 1.25rem auto 0;
+        gap: 0.6rem;
+    }
+
+    .settings-row {
+        display: grid;
+        grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 2fr) minmax(9rem, 1fr) minmax(10rem, 1fr);
+        align-items: center;
+        gap: 0.75rem;
+        text-align: end;
+    }
+
+    .settings-row select, .settings-row input {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .extend-to-end input, .extend-to-end select {
+        grid-column: 2 / -1;
+    }
+</style>
 
 @code {
-    // must be disposed of properly later
-    private DotNetObjectReference<Home>? callback;
+    // File Paths
+    private const string DIAL_ICON = "dial.png";
+    private const string SETTINGS_ICON = "amp2.png";
 
-    private string Status = "Disconnected";
-
+    // Function Names From JS Environment
     private const string JSFUNC_CONNECT = "tcpClient.connect";
     private const string JSFUNC_SEND = "tcpClient.send";
     private const string JSFUNC_CLOSE = "tcpClient.close";
+
+    // Endpoints
     private const string BRIDGE_ENDPOINT = "ws://127.0.0.1:7081/backend";
+
+    // Front Facing Strings
+    private static readonly string[] Labels = [
+        "Voice", 
+        "Gain", 
+        "Volume", 
+        "Bass", 
+        "Treble",
+    ];
+
+    // Data
+    private static readonly DialKnob[] DialKnobs =
+    [
+        new(Labels[0]),
+        new(Labels[1]),
+        new(Labels[2]),
+        new(Labels[3]),
+        new(Labels[4])
+    ];
+
+    private DialKnobsData Dials { get; set; } = new();
+    private SettingsData Settings { get; set; } = new();
+    private bool InputsCaptured { get; set; }
+
+    /// <summary>
+    /// This object is to be injected into the JS Runtime so it can call the functions here
+    /// </summary>
+    private DotNetObjectReference<Home>? callback;
+
+    /// <summary>
+    /// Controls if the settings section is being shown
+    /// </summary>
+    private bool IsSettingsOpen;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
-        {
             return;
-        }
-
+        
+        // connect to bridge
         callback = DotNetObjectReference.Create(this);
-
         await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
-
-        Status = "Connecting";
         StateHasChanged();
     }
 
-    private async Task SendBytes()
+    public async ValueTask DisposeAsync()
     {
-        byte[] testData = { 0x01, 0x02, 0x03 };
-
-        await JS.InvokeVoidAsync(JSFUNC_SEND, testData);
+        await JS.InvokeVoidAsync(JSFUNC_CLOSE);
+        callback?.Dispose();
     }
 
     [JSInvokable]
@@ -48,13 +233,29 @@
             .Select(value => (byte)value)
             .ToArray();
 
-        Status = $"Received {message.Length} bytes";
         return InvokeAsync(StateHasChanged);
     }
 
-    public async ValueTask DisposeAsync()
+    private void ToggleSettings()
     {
-        await JS.InvokeVoidAsync(JSFUNC_CLOSE);
-        callback?.Dispose();
+        IsSettingsOpen = !IsSettingsOpen;
+    }
+
+    private void CaptureInputs()
+    {
+        
+    }
+
+    private async Task SendBytes()
+    {
+        byte[] testData = { 0x01, 0x02, 0x03 };
+
+        await JS.InvokeVoidAsync(JSFUNC_SEND, testData);
+    }
+
+    private class DialKnob(string label)
+    {
+        public string Label { get; } = label;
+        public float Value { get; set; }
     }
 }
