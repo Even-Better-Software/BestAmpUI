@@ -14,7 +14,7 @@
                     <span class="control-label">@dial.Label</span>
                     <span class="control-input">
                         <img src="@DIAL_ICON" alt="Dial" />
-                        <input type="number" step="any" @bind="dial.Value" />
+                        <input type="number" step="any" @bind="dial.Value" @bind:after="SendDials" />
                     </span>
                 </div>
             }
@@ -176,23 +176,14 @@
     // Endpoints
     private const string BRIDGE_ENDPOINT = "ws://127.0.0.1:7081/backend";
 
-    // Front Facing Strings
-    private static readonly string[] Labels = [
-        "Voice", 
-        "Gain", 
-        "Volume", 
-        "Bass", 
-        "Treble",
-    ];
-
     // Data
     private static readonly DialKnob[] DialKnobs =
     [
-        new(Labels[0]),
-        new(Labels[1]),
-        new(Labels[2]),
-        new(Labels[3]),
-        new(Labels[4])
+        new("Voice"),
+        new("Gain"),
+        new("Volume"),
+        new("Bass"),
+        new("Treble")
     ];
 
     private DialKnobsData Dials { get; set; } = new();
@@ -213,7 +204,7 @@
     {
         if (!firstRender)
             return;
-        
+
         // connect to bridge
         callback = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
@@ -243,19 +234,22 @@
 
     private void CaptureInputs()
     {
-        
+        Dials.Voice = DialKnobs[0].Value;
+        Dials.Gain = DialKnobs[1].Value;
+        Dials.Volume = DialKnobs[2].Value;
+        Dials.Bass = DialKnobs[3].Value;
+        Dials.Treble = DialKnobs[4].Value;
     }
 
-    private async Task SendBytes()
+    private async Task SendDials()
     {
-        byte[] testData = { 0x01, 0x02, 0x03 };
-
-        await JS.InvokeVoidAsync(JSFUNC_SEND, testData);
+        CaptureInputs();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, Dials.BuildMessage());
     }
 
     private class DialKnob(string label)
     {
         public string Label { get; } = label;
-        public float Value { get; set; }
+        public int Value { get; set; }
     }
 }
