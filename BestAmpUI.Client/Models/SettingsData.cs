@@ -9,7 +9,7 @@ public class SettingsData
     public int ChannelIn { get; set; } = 0;
     public int DeviceOut { get; set; } = 0;
     public int ChannelOut { get; set; } = 0;
-    public int SampleRate { get; set; } = 0;
+    public float SampleRate { get; set; } = 0;
     public int FramesPerBuffer { get; set; } = 0;
     public int SampleFormat { get; set; } = 0;
 
