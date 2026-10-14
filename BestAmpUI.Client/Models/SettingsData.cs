@@ -3,6 +3,7 @@ namespace BestAmpUI.Client.Models;
 public class SettingsData
 {
     private const int OPCODE = 1;
+    private const int CONTENT_LENGTH = 8 * sizeof(int);
     public int HostApi { get; set; } = 0;
     public int DeviceIn { get; set; } = 0;
     public int ChannelIn { get; set; } = 0;
@@ -17,7 +18,7 @@ public class SettingsData
         List<byte> msg = [];
 
         AppendAsNetworkOrder(msg, BitConverter.GetBytes(OPCODE));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(GetContentLength()));
+        AppendAsNetworkOrder(msg, BitConverter.GetBytes(CONTENT_LENGTH));
         AppendAsNetworkOrder(msg, BitConverter.GetBytes(HostApi));
         AppendAsNetworkOrder(msg, BitConverter.GetBytes(DeviceIn));
         AppendAsNetworkOrder(msg, BitConverter.GetBytes(DeviceOut));
@@ -28,14 +29,6 @@ public class SettingsData
         // no sampleformat yet
 
         return [.. msg];
-    }
-
-    private int GetContentLength()
-    {
-        int length = 0;
-
-// TODO
-        return length;
     }
 
     private static void AppendAsNetworkOrder(List<byte> msg, byte[] bytes)
