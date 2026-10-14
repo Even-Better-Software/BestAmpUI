@@ -35,45 +35,46 @@
         {
             <section class="settings-panel">
                 <div class="settings-row extend-to-end">
-                    <label for="host-api">Host API</label>
-                    <select id="hostApi" @bind="Settings.HostApi">
+                    <label for="hostApi">Host API</label>
+                    @* <select id="hostApi" @bind="Settings.HostApi">
                         <option value=""></option>
-                    </select>
+                    </select> *@
+                    <input id="hostApi" type="number" @bind="Settings.HostApi" />
                 </div>
                 <div class="settings-row">
-                    <label for="in-device">In Device</label>
-                    <select id="deviceIn" @bind="Settings.DeviceIn">
+                    <label for="deviceIn">In Device</label>
+                    @* <select id="deviceIn" @bind="Settings.DeviceIn">
                         <option value=""></option>
-                    </select>
-                    <label for="in-channel">In Channel Number</label>
+                    </select> *@
+                    <input id="deviceIn" type="number" @bind="Settings.DeviceIn" />
+                    <label for="channelIn">In Channel Number</label>
                     <input id="channelIn" type="number" @bind="Settings.ChannelIn" />
                 </div>
                 <div class="settings-row">
-                    <label for="out-device">Out device</label>
-                    <select id="deviceOut" @bind="Settings.DeviceOut">
+                    <label for="deviceOut">Out device</label>
+                    @* <select id="deviceOut" @bind="Settings.DeviceOut">
                         <option value=""></option>
-                    </select>
-                    <label for="out-channel">Out Channel Number</label>
+                    </select> *@
+                    <input id="deviceOut" type="number" @bind="Settings.DeviceOut" />
+                    <label for="channelOut">Out Channel Number</label>
                     <input id="channelOut" type="number" @bind="Settings.ChannelOut" />
                 </div>
                 <div class="settings-row extend-to-end">
-                    <label for="sample-rate">Sample Rate (in Hz)</label>
+                    <label for="sampleRate">Sample Rate (in Hz)</label>
                     <input id="sampleRate" type="number" @bind="Settings.SampleRate" />
                 </div>
                 <div class="settings-row extend-to-end">
-                    <label for="frames-per-buffer">Frames per buffer</label>
+                    <label for="framesPerBuffer">Frames per buffer</label>
                     <input id="framesPerBuffer" type="number" @bind="Settings.FramesPerBuffer" />
                 </div>
             </section>
+
+            <div>
+                <button type="button" @onclick="SendSettings">Send Settings msg</button>
+            </div>
         }
 
-        @* <div>
-            <button type="button" @onclick="CaptureInputs">Capture Inputs</button>
-            @if (InputsCaptured)
-            {
-                <span role="status">Inputs captured.</span>
-            }
-        </div> *@
+        
 
         @* <div class="connection-status">
             <span>Status: @Status</span>
@@ -239,6 +240,11 @@
         Dials.Volume = DialKnobs[2].Value;
         Dials.Bass = DialKnobs[3].Value;
         Dials.Treble = DialKnobs[4].Value;
+    }
+
+    private async Task SendSettings()
+    {
+        await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMessage());
     }
 
     private async Task SendDials()
