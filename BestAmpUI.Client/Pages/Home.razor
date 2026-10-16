@@ -189,8 +189,7 @@
 
     private DialKnobsData Dials { get; set; } = new();
     private SettingsData Settings { get; set; } = new();
-    private bool InputsCaptured { get; set; }
-
+    
     /// <summary>
     /// This object is to be injected into the JS Runtime so it can call the functions here
     /// </summary>
@@ -233,7 +232,7 @@
         IsSettingsOpen = !IsSettingsOpen;
     }
 
-    private void CaptureInputs()
+    private void CaptureDials()
     {
         Dials.Voice = DialKnobs[0].Value;
         Dials.Gain = DialKnobs[1].Value;
@@ -242,15 +241,16 @@
         Dials.Treble = DialKnobs[4].Value;
     }
 
+
     private async Task SendSettings()
     {
-        await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMessage());
+        await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMsg());
     }
 
     private async Task SendDials()
     {
-        CaptureInputs();
-        await JS.InvokeVoidAsync(JSFUNC_SEND, Dials.BuildMessage());
+        CaptureDials();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, Dials.BuildMsg());
     }
 
     private class DialKnob(string label)

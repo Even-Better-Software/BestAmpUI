@@ -1,9 +1,9 @@
 namespace BestAmpUI.Client.Models;
 
-public class SettingsData
+public class SettingsData : Message
 {
     private const int OPCODE = 1;
-    private const int CONTENT_LENGTH = 8 * sizeof(int);
+    private const int CONTENT_LENGTH = 7 * sizeof(int) + 1 * sizeof(float);
     public int HostApi { get; set; } = 0;
     public int DeviceIn { get; set; } = 0;
     public int ChannelIn { get; set; } = 0;
@@ -13,26 +13,24 @@ public class SettingsData
     public int FramesPerBuffer { get; set; } = 0;
     public int SampleFormat { get; set; } = 0;
 
-     public byte[] BuildMessage()
+    protected override void BuildMsgContent()
     {
-        List<byte> msg = [];
-
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(OPCODE));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(CONTENT_LENGTH));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(HostApi));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(DeviceIn));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(DeviceOut));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(ChannelIn));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(ChannelOut));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(FramesPerBuffer));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(SampleRate));
-        // no sampleformat yet
-
-        return [.. msg];
+        AppendToMsg(BitConverter.GetBytes(HostApi));
+        AppendToMsg(BitConverter.GetBytes(DeviceIn));
+        AppendToMsg(BitConverter.GetBytes(DeviceOut));
+        AppendToMsg(BitConverter.GetBytes(ChannelIn));
+        AppendToMsg(BitConverter.GetBytes(ChannelOut));
+        AppendToMsg(BitConverter.GetBytes(FramesPerBuffer));
+        AppendToMsg(BitConverter.GetBytes(SampleRate));
     }
 
-    private static void AppendAsNetworkOrder(List<byte> msg, byte[] bytes)
+    protected override int GetContentLength()
     {
-        msg.AddRange(BitConverter.IsLittleEndian ? bytes.Reverse() : bytes);
+        return CONTENT_LENGTH;
+    }
+
+    protected override int GetOpCode()
+    {
+        return OPCODE;
     }
 }

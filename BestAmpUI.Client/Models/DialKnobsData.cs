@@ -1,32 +1,31 @@
 namespace BestAmpUI.Client.Models;
 
-public class DialKnobsData
+public class DialKnobsData : Message
 {
     private const int OPCODE = 2;
-    private const int CONTENT_LENGTH = 5 * sizeof(float);
+    private const int CONTENT_LENGTH = 5 * sizeof(int);
     public int Voice { get; set; } = 0;
     public int Gain { get; set; } = 0;
     public int Volume { get; set; } = 0;
     public int Bass { get; set; } = 0;
     public int Treble { get; set; } = 0;
 
-    public byte[] BuildMessage()
+    protected override void BuildMsgContent()
     {
-        List<byte> msg = [];
-
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(OPCODE));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(CONTENT_LENGTH));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(Gain));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(Bass));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(Treble));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(Volume));
-        AppendAsNetworkOrder(msg, BitConverter.GetBytes(Voice));
-
-        return [.. msg];
+        AppendToMsg(BitConverter.GetBytes(Gain));
+        AppendToMsg(BitConverter.GetBytes(Bass));
+        AppendToMsg(BitConverter.GetBytes(Treble));
+        AppendToMsg(BitConverter.GetBytes(Volume));
+        AppendToMsg(BitConverter.GetBytes(Voice));
     }
 
-    private static void AppendAsNetworkOrder(List<byte> msg, byte[] bytes)
+    protected override int GetContentLength()
     {
-        msg.AddRange(BitConverter.IsLittleEndian ? bytes.Reverse() : bytes);
+        return CONTENT_LENGTH;
+    }
+
+    protected override int GetOpCode()
+    {
+        return OPCODE;
     }
 }
