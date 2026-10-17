@@ -1,6 +1,6 @@
 namespace BestAmpUI.Client.Models;
 
-public class DialKnobsData : Message
+public class DialKnobsData : Request
 {
     private const int OPCODE = 2;
     private const int CONTENT_LENGTH = 5 * sizeof(int);

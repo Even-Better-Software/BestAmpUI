@@ -1,6 +1,6 @@
 namespace BestAmpUI.Client.Models;
 
-public abstract class Message
+public abstract class Request
 {
     protected List<byte> Msg = [];
 

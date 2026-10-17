@@ -241,7 +241,6 @@
         Dials.Treble = DialKnobs[4].Value;
     }
 
-
     private async Task SendSettings()
     {
         await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMsg());

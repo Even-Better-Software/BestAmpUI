@@ -1,6 +1,6 @@
 namespace BestAmpUI.Client.Models;
 
-public class SettingsData : Message
+public class SettingsData : Request
 {
     private const int OPCODE = 1;
     private const int CONTENT_LENGTH = 7 * sizeof(int) + 1 * sizeof(float);
