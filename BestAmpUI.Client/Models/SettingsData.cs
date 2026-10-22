@@ -3,13 +3,13 @@ namespace BestAmpUI.Client.Models;
 public class SettingsData : Request
 {
     private const int OPCODE = 1;
-    private const int CONTENT_LENGTH = 7 * sizeof(int) + 1 * sizeof(float);
+    private const int CONTENT_LENGTH = 7 * sizeof(int) + 1 * sizeof(double);
     public int HostApi { get; set; } = 0;
     public int DeviceIn { get; set; } = 0;
     public int ChannelIn { get; set; } = 0;
     public int DeviceOut { get; set; } = 0;
     public int ChannelOut { get; set; } = 0;
-    public float SampleRate { get; set; } = 0;
+    public double SampleRate { get; set; } = 0;
     public int FramesPerBuffer { get; set; } = 0;
     public int SampleFormat { get; set; } = 0;
 
