@@ -1,6 +1,7 @@
 ﻿@page "/"
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@using System.ComponentModel
 @using BestAmpUI.Client.Models
 
 <main>
@@ -187,9 +188,16 @@
         new("Treble")
     ];
 
+    private static Dictionary<int, Func<byte[], Response>> OpcodeToResponse = new()
+    {
+            { DefaultHostApiResponse.OPCODE, (msg) => new DefaultHostApiResponse(msg) },
+            { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
+            { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
+    };
+
     private DialKnobsData Dials { get; set; } = new();
     private SettingsData Settings { get; set; } = new();
-    
+
     /// <summary>
     /// This object is to be injected into the JS Runtime so it can call the functions here
     /// </summary>
@@ -208,6 +216,7 @@
         // connect to bridge
         callback = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
+
         StateHasChanged();
     }
 
@@ -218,18 +227,65 @@
     }
 
     [JSInvokable]
-    public Task OnTcpMessage(int[] values)
-    {
-        byte[] message = values
-            .Select(value => (byte)value)
-            .ToArray();
+    public Task OnTcpMessage(byte[] message)
+    {   
+        int opcode = Response.OpcodeFromMessage(message);
+
+        Response response;
+        try
+        {
+            response = OpcodeToResponse[opcode](message);
+            HandleResponse(response, opcode);
+        } 
+        catch (KeyNotFoundException)
+        {
+            Console.WriteLine($"Unknown opcode {opcode}");
+        }
 
         return InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleResponse(Response response, int opcode)
+    {
+        Console.WriteLine($"Received message with opcode {opcode}");
+        switch (opcode)
+        {
+            case DefaultHostApiResponse.OPCODE:
+                DefaultHostApiResponse defaultApi = (DefaultHostApiResponse) response;
+                Settings.HostApi = defaultApi.HostApiId;
+                Console.WriteLine($"Response: {defaultApi.HostApiId}, {defaultApi.HostApiName}");
+                break;
+
+            case HostApisResponse.OPCODE:
+                HostApisResponse apis = (HostApisResponse) response;
+                foreach (var api in apis.HostApis)
+                {
+                    Console.WriteLine($"Response: {api.Key}, {api.Value}");
+                }
+                break;
+
+            case DeviceIdsResponse.OPCODE:
+                DeviceIdsResponse devices = (DeviceIdsResponse) response;
+                foreach (var device in devices.Devices)
+                {
+                    Console.WriteLine($"Response: {device.Key}, {device.Value.Name}");
+                }
+                break;
+
+            default:
+                Console.WriteLine($"Handler for opcode {opcode} not found.");
+                break;   
+        }
     }
 
     private void ToggleSettings()
     {
         IsSettingsOpen = !IsSettingsOpen;
+
+        // request some things
+        _ = RequestDefaultHostApi();
+        _ = RequestHostApis();
+        _ = RequestDeviceIds();
     }
 
     private void CaptureDials()
@@ -250,6 +306,25 @@
     {
         CaptureDials();
         await JS.InvokeVoidAsync(JSFUNC_SEND, Dials.BuildMsg());
+    }
+
+    private async Task RequestDefaultHostApi()
+    {
+        DefaultHostApiRequest request = new();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, request.BuildMsg());
+    }
+
+    private async Task RequestDeviceIds()
+    {
+        DeviceIdsRequest request = new();
+        request.HostApi = Settings.HostApi;
+        await JS.InvokeVoidAsync(JSFUNC_SEND, request.BuildMsg());
+    }
+
+    private async Task RequestHostApis()
+    {
+        HostApisRequest request = new();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, request.BuildMsg());
     }
 
     private class DialKnob(string label)

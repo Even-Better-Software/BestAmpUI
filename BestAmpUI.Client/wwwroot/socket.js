@@ -18,7 +18,7 @@ window.tcpClient = {
             const data = new Uint8Array(event.data);
 
             // needs to match method name in Home.razor
-            this.dotNetObject.invokeMethodAsync("OnTcpMessage", Array.from(data));
+            this.dotNetObject.invokeMethodAsync("OnTcpMessage", data);
         };
 
         this.sock.onclose = () => {

@@ -4,7 +4,7 @@ namespace BestAmpUI.Client.Models;
 
 public class DefaultHostApiResponse : Response
 {
-    private const int OPCODE = 4;
+    public const int OPCODE = 1004;
     public int HostApiId { get; private set; } = 0;
     public string HostApiName { get; private set; } = "";
 
@@ -35,7 +35,7 @@ public class DefaultHostApiResponse : Response
         StringBuilder builder = new();
         while (msg[start] != '\0')
         {
-            builder.Append(msg[start++]);
+            builder.Append((char)msg[start++]);
         }
         HostApiName = builder.ToString();
     }

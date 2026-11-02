@@ -4,7 +4,7 @@ namespace BestAmpUI.Client.Models;
 
 public class DeviceIdsResponse : Response
 {
-    private const int OPCODE = 5;
+    public const int OPCODE = 1005;
 
     public Dictionary<int, DeviceInfo> Devices = [];
 
@@ -30,9 +30,14 @@ public class DeviceIdsResponse : Response
         }
 
         StringBuilder builder = new();
-        int index = 0;
         while (start < msg.Length)
         {
+            if (start + 1 >= msg.Length && msg[start] == '\0')
+            {
+                Console.WriteLine("Extra \\0");
+                break; // end of message
+            }
+
             DeviceInfo device = new();
 
             int deviceId = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
@@ -41,7 +46,7 @@ public class DeviceIdsResponse : Response
             builder.Clear();
             while (msg[start] != '\0')
             {
-                builder.Append(msg[start++]);
+                builder.Append((char)msg[start++]);
             }
             start++;
             device.Name = builder.ToString();
@@ -55,9 +60,7 @@ public class DeviceIdsResponse : Response
             device.SampleRate = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
 
-            Devices.Add(deviceId, device);
-
-            index++;
+            Devices[deviceId] = device;
         }
        
     }

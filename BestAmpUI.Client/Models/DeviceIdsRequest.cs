@@ -2,7 +2,7 @@ namespace BestAmpUI.Client.Models;
 
 public class DeviceIdsRequest : Request
 {
-    private const int OPCODE = 5;
+    public const int OPCODE = 5;
     private const int CONTENT_LENGTH = sizeof(int);
     public int HostApi { get; set; } = 0;
 

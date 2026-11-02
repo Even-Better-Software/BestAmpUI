@@ -4,7 +4,7 @@ namespace BestAmpUI.Client.Models;
 
 public class HostApisResponse : Response
 {
-    private const int OPCODE = 3;
+    public const int OPCODE = 1003;
 
     public Dictionary<int, string> HostApis = [];
 
@@ -30,23 +30,27 @@ public class HostApisResponse : Response
         }
 
         StringBuilder builder = new();
-        int index = 0;
+
         while (start < msg.Length)
         {
+            if (start + 1 >= msg.Length && msg[start] == '\0')
+            {
+                Console.WriteLine("Extra \\0");
+                break; // end of message
+            }
+
             int hostApiId = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
 
             builder.Clear();
             while (msg[start] != '\0')
             {
-                builder.Append(msg[start++]);
+                builder.Append((char)msg[start++]);
             }
             start++;
             string hostApiName = builder.ToString();
             
-            HostApis.Add(hostApiId, hostApiName);
-
-            index++;
+            HostApis[hostApiId] = hostApiName;
         }
        
     }

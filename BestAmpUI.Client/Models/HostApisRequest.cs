@@ -2,7 +2,7 @@ namespace BestAmpUI.Client.Models;
 
 public class HostApisRequest : Request
 {
-    private const int OPCODE = 3;
+    public const int OPCODE = 3;
     private const int CONTENT_LENGTH = 0;
 
     protected override void BuildMsgContent() { }
