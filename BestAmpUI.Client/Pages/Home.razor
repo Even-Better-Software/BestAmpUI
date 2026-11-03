@@ -1,7 +1,6 @@
 ﻿@page "/"
 @implements IAsyncDisposable
 @inject IJSRuntime JS
-@using System.ComponentModel
 @using BestAmpUI.Client.Models
 
 <main>
@@ -53,7 +52,7 @@
                 </div>
                 <div class="settings-row">
                     <label for="deviceOut">Out device</label>
-                    @* <select id="deviceOut" @bind="Settings.DeviceOut">
+                    @*<select id="deviceOut" @bind="Settings.DeviceOut">
                         <option value=""></option>
                     </select> *@
                     <input id="deviceOut" type="number" @bind="Settings.DeviceOut" />
@@ -74,13 +73,6 @@
                 <button type="button" @onclick="SendSettings">Send Settings msg</button>
             </div>
         }
-
-        
-
-        @* <div class="connection-status">
-            <span>Status: @Status</span>
-            <button type="button" @onclick="SendBytes">Send Data</button>
-        </div> *@
     </header>
 
     <section class="amplifier-workspace" aria-label="Amplifier workspace"></section>
@@ -166,6 +158,11 @@
 </style>
 
 @code {
+    /// <summary>
+    /// This object is to be injected into the JS Runtime so it can call the functions here
+    /// </summary>
+    private DotNetObjectReference<Home>? callback;
+
     // File Paths
     private const string DIAL_ICON = "dial.png";
     private const string SETTINGS_ICON = "amp2.png";
@@ -178,7 +175,7 @@
     // Endpoints
     private const string BRIDGE_ENDPOINT = "ws://127.0.0.1:7081/backend";
 
-    // Data
+    // Hardcoded Data
     private static readonly DialKnob[] DialKnobs =
     [
         new("Voice"),
@@ -190,18 +187,13 @@
 
     private static Dictionary<int, Func<byte[], Response>> OpcodeToResponse = new()
     {
-            { DefaultHostApiResponse.OPCODE, (msg) => new DefaultHostApiResponse(msg) },
             { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
             { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
     };
 
+    // Properties
     private DialKnobsData Dials { get; set; } = new();
     private SettingsData Settings { get; set; } = new();
-
-    /// <summary>
-    /// This object is to be injected into the JS Runtime so it can call the functions here
-    /// </summary>
-    private DotNetObjectReference<Home>? callback;
 
     /// <summary>
     /// Controls if the settings section is being shown
@@ -250,12 +242,6 @@
         Console.WriteLine($"Received message with opcode {opcode}");
         switch (opcode)
         {
-            case DefaultHostApiResponse.OPCODE:
-                DefaultHostApiResponse defaultApi = (DefaultHostApiResponse) response;
-                Settings.HostApi = defaultApi.HostApiId;
-                Console.WriteLine($"Response: {defaultApi.HostApiId}, {defaultApi.HostApiName}");
-                break;
-
             case HostApisResponse.OPCODE:
                 HostApisResponse apis = (HostApisResponse) response;
                 foreach (var api in apis.HostApis)
@@ -282,7 +268,8 @@
     {
         IsSettingsOpen = !IsSettingsOpen;
 
-        // request some things
+        
+        // DEBUG: request some things
         _ = RequestDefaultHostApi();
         _ = RequestHostApis();
         _ = RequestDeviceIds();

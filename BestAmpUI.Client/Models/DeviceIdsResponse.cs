@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace BestAmpUI.Client.Models;
 
 public class DeviceIdsResponse : Response
@@ -29,27 +27,15 @@ public class DeviceIdsResponse : Response
             Console.WriteLine($"Error: Mismatching content length.");
         }
 
-        StringBuilder builder = new();
         while (start < msg.Length)
         {
-            if (start + 1 >= msg.Length && msg[start] == '\0')
-            {
-                Console.WriteLine("Extra \\0");
-                break; // end of message
-            }
-
             DeviceInfo device = new();
 
             int deviceId = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
 
-            builder.Clear();
-            while (msg[start] != '\0')
-            {
-                builder.Append((char)msg[start++]);
-            }
-            start++;
-            device.Name = builder.ToString();
+            device.Name = ParseAscii(msg[start ..]);
+            start += STRING_LENGTH;
             
             device.MaxInChannel = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
@@ -57,8 +43,8 @@ public class DeviceIdsResponse : Response
             device.MaxOutChannel = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
 
-            device.SampleRate = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
-            start += sizeof(int);
+            device.SampleRate = BitConverter.ToDouble(AsHostOrderBytes(msg, start, sizeof(double)));
+            start += sizeof(double);
 
             Devices[deviceId] = device;
         }

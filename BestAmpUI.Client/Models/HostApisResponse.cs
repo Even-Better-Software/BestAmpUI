@@ -1,12 +1,10 @@
-using System.Text;
-
 namespace BestAmpUI.Client.Models;
 
 public class HostApisResponse : Response
 {
     public const int OPCODE = 1003;
 
-    public Dictionary<int, string> HostApis = [];
+    public Dictionary<int, HostApiInfo> HostApis = [];
 
     public HostApisResponse(byte[] msg)
     {
@@ -29,28 +27,23 @@ public class HostApisResponse : Response
             Console.WriteLine($"Error: Mismatching content length.");
         }
 
-        StringBuilder builder = new();
-
         while (start < msg.Length)
         {
-            if (start + 1 >= msg.Length && msg[start] == '\0')
-            {
-                Console.WriteLine("Extra \\0");
-                break; // end of message
-            }
+            HostApiInfo info = new();
 
             int hostApiId = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
             start += sizeof(int);
 
-            builder.Clear();
-            while (msg[start] != '\0')
-            {
-                builder.Append((char)msg[start++]);
-            }
-            start++;
-            string hostApiName = builder.ToString();
+            info.Name = ParseAscii(msg[start ..]);
+            start += STRING_LENGTH;
             
-            HostApis[hostApiId] = hostApiName;
+            info.DefaultInDevice = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
+            start += sizeof(int);
+
+            info.DefaultOutDevice = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
+            start += sizeof(int);
+
+            HostApis[hostApiId] = info;
         }
        
     }
