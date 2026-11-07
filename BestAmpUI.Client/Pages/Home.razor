@@ -279,16 +279,11 @@
         switch (opcode)
         {
             case UpdateAmpValuesResponse.OPCODE:
-                bool success = ((UpdateAmpValuesResponse)response).success;
-                Console.WriteLine(success ? 
-                    "Updated amp values successfully!" : 
-                    "Failed to update amp values!"
-                );
+                Console.WriteLine("Updated amp values successfully!");
                 break;
 
             case UpdatePrefsResponse.OPCODE:
-                bool success = ((UpdatePrefsResponse)response).success;
-                Console.WriteLine(success ? 
+                Console.WriteLine(((UpdatePrefsResponse)response).success ? 
                     "Updated settings successfully!" : 
                     "Failed to update amp settings!"
                 );
@@ -340,7 +335,7 @@
     {
         if (SettingsOpen)
         {
-            SendSettings();
+            _ = SendSettings();
         } 
         SettingsOpen = !SettingsOpen;
     }

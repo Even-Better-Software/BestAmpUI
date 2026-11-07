@@ -28,6 +28,6 @@ public class UpdatePrefsResponse : Response
         }
 
         int content = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
-        success = content == 1;
+        success = content == 0;
     }
 }

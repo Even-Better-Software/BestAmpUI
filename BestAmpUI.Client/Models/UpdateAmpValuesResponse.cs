@@ -3,7 +3,6 @@ namespace BestAmpUI.Client.Models;
 public class UpdateAmpValuesResponse : Response
 {
     public const int OPCODE = 1002;
-    public bool success = false;
 
     public UpdateAmpValuesResponse(byte[] msg)
     {
@@ -25,8 +24,5 @@ public class UpdateAmpValuesResponse : Response
         {
             Console.WriteLine($"Error: Mismatching content length.");
         }
-
-        int content = BitConverter.ToInt32(AsHostOrderBytes(msg, start, sizeof(int)));
-        success = content == 1;
     }
 }
