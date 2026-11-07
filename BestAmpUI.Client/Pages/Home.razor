@@ -1,6 +1,8 @@
 ﻿@page "/"
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject HttpClient HTTP
+@using System.Text
 @using BestAmpUI.Client.Models
 
 <main>
@@ -175,6 +177,7 @@
     // File Paths
     private const string DIAL_ICON = "dial.png";
     private const string SETTINGS_ICON = "amp2.png";
+    private const string DATA = "data.bestamp";
 
     // Function Names From JS Environment
     private const string JSFUNC_CONNECT = "tcpClient.connect";
@@ -235,7 +238,16 @@
         {
             // connect to bridge
             callback = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
+            _ = JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
+
+            // check stored data
+            byte[] data = await HTTP.GetByteArrayAsync(DATA, CancellationToken.None);
+            Console.Write("Stored data: ");
+            foreach (byte character in data)
+            {
+                Console.Write((char)character);
+            }
+            Console.WriteLine();
 
             StateHasChanged(); 
         }
