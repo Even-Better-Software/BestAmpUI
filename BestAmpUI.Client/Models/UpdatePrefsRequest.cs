@@ -1,6 +1,6 @@
 namespace BestAmpUI.Client.Models;
 
-public class SettingsData : Request
+public class UpdatePrefsRequest : Request
 {
     private const int OPCODE = 1;
     private const int CONTENT_LENGTH = 7 * sizeof(int) + 1 * sizeof(double);
@@ -22,6 +22,7 @@ public class SettingsData : Request
         AppendToMsg(BitConverter.GetBytes(ChannelOut));
         AppendToMsg(BitConverter.GetBytes(FramesPerBuffer));
         AppendToMsg(BitConverter.GetBytes(SampleRate));
+        AppendToMsg(BitConverter.GetBytes(SampleFormat));
     }
 
     protected override int GetContentLength()

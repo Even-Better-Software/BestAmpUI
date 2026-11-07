@@ -196,13 +196,15 @@
 
     private static Dictionary<int, Func<byte[], Response>> OpcodeToResponse = new()
     {
-            { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
-            { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
+        { UpdatePrefsResponse.OPCODE, (msg) => new UpdatePrefsResponse(msg) },
+        { UpdateAmpValuesResponse.OPCODE, (msg) => new UpdateAmpValuesResponse(msg)},
+        { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
+        { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
     };
 
     // Properties
-    private DialKnobsData Dials { get; set; } = new();
-    private SettingsData Settings { get; set; } = new();
+    private UpdateAmpValuesRequest Dials { get; set; } = new();
+    private UpdatePrefsRequest Settings { get; set; } = new();
     private int HostApiSelection {
         get => Settings.HostApi;
         set
@@ -276,6 +278,22 @@
         Console.WriteLine($"Received message with opcode {opcode}");
         switch (opcode)
         {
+            case UpdateAmpValuesResponse.OPCODE:
+                bool success = ((UpdateAmpValuesResponse)response).success;
+                Console.WriteLine(success ? 
+                    "Updated amp values successfully!" : 
+                    "Failed to update amp values!"
+                );
+                break;
+
+            case UpdatePrefsResponse.OPCODE:
+                bool success = ((UpdatePrefsResponse)response).success;
+                Console.WriteLine(success ? 
+                    "Updated settings successfully!" : 
+                    "Failed to update amp settings!"
+                );
+                break;
+
             case HostApisResponse.OPCODE:
                 HostApisResponse apis = (HostApisResponse) response;
                 HostApis = apis.HostApis;

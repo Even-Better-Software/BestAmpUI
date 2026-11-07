@@ -1,6 +1,6 @@
 namespace BestAmpUI.Client.Models;
 
-public class DialKnobsData : Request
+public class UpdateAmpValuesRequest : Request
 {
     private const int OPCODE = 2;
     private const int CONTENT_LENGTH = 5 * sizeof(int);
