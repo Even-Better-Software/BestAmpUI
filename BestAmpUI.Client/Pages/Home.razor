@@ -23,55 +23,64 @@
                 <span class="control-label">Settings</span>
                 <span class="control-input">
                     <img src="@SETTINGS_ICON" alt="Settings" />
-                    @{string buttonLabel = IsSettingsOpen ? "^" : "v";}
+                    @{string buttonLabel = SettingsOpen ? "Save" : "Open";}
                     <input type="button" @onclick="ToggleSettings" value=@buttonLabel>
-                        @if (IsSettingsOpen) {<span>v</span>} else {<span>^</span>}
+                        @if (SettingsOpen) {<span>v</span>} else {<span>^</span>}
                     </input>
                 </span>
             </div>
         </div>
 
-        @if (IsSettingsOpen)
+        @if (SettingsOpen)
         {
             <section class="settings-panel">
                 <div class="settings-row extend-to-end">
                     <label for="hostApi">Host API</label>
-                    @* <select id="hostApi" @bind="Settings.HostApi">
-                        <option value=""></option>
-                    </select> *@
-                    <input id="hostApi" type="number" @bind="Settings.HostApi" />
+                    <select id="hostApi" @bind=HostApiSelection>
+                        @foreach (var hostApi in HostApis)
+                        {
+                            <option value=@hostApi.Key>@hostApi.Value.Name</option>
+                        }
+                    </select>
                 </div>
                 <div class="settings-row">
                     <label for="deviceIn">In Device</label>
-                    @* <select id="deviceIn" @bind="Settings.DeviceIn">
-                        <option value=""></option>
-                    </select> *@
-                    <input id="deviceIn" type="number" @bind="Settings.DeviceIn" />
+                    <select id="deviceIn" @bind="Settings.DeviceIn">
+                        @foreach (var device in Devices)
+                        {
+                            <option value=@device.Key>@device.Value.Name</option>
+                        }
+                    </select>
                     <label for="channelIn">In Channel Number</label>
-                    <input id="channelIn" type="number" @bind="Settings.ChannelIn" />
+                    <input id="channelIn" type="number" min=0 max=@MaxChannelIn() @bind="Settings.ChannelIn" />
                 </div>
                 <div class="settings-row">
                     <label for="deviceOut">Out device</label>
-                    @*<select id="deviceOut" @bind="Settings.DeviceOut">
-                        <option value=""></option>
-                    </select> *@
-                    <input id="deviceOut" type="number" @bind="Settings.DeviceOut" />
+                    <select id="deviceOut" @bind="Settings.DeviceOut">
+                        @foreach (var device in Devices)
+                        {
+                            <option value=@device.Key>@device.Value.Name</option>
+                        }
+                    </select>
                     <label for="channelOut">Out Channel Number</label>
-                    <input id="channelOut" type="number" @bind="Settings.ChannelOut" />
+                    <input id="channelOut" type="number" min=0 max=@MaxChannelOut() @bind="Settings.ChannelOut" />
                 </div>
                 <div class="settings-row extend-to-end">
                     <label for="sampleRate">Sample Rate (in Hz)</label>
                     <input id="sampleRate" type="number" @bind="Settings.SampleRate" />
                 </div>
                 <div class="settings-row extend-to-end">
+                    
                     <label for="framesPerBuffer">Frames per buffer</label>
-                    <input id="framesPerBuffer" type="number" @bind="Settings.FramesPerBuffer" />
+                    <select id="framesPerBuffer" @bind="Settings.FramesPerBuffer">
+                        <option value=0>0</option>
+                        @for (int exp = 1; exp <= 9; exp++)
+                        {
+                            <option>@Math.Pow(2, exp)</option>
+                        }
+                    </select>
                 </div>
             </section>
-
-            <div>
-                <button type="button" @onclick="SendSettings">Send Settings msg</button>
-            </div>
         }
     </header>
 
@@ -194,28 +203,53 @@
     // Properties
     private DialKnobsData Dials { get; set; } = new();
     private SettingsData Settings { get; set; } = new();
+    private int HostApiSelection {
+        get => Settings.HostApi;
+        set
+        {
+            Settings.HostApi = value;
+            _ = RequestDeviceIds();
+            Settings.DeviceIn = -1;
+            Settings.DeviceOut = -1;
+        }
+    }
+
+    private Dictionary<int, HostApiInfo> HostApis = [];
+    private Dictionary<int, DeviceInfo> Devices = [];
 
     /// <summary>
     /// Controls if the settings section is being shown
     /// </summary>
-    private bool IsSettingsOpen;
+    private bool SettingsOpen { get; set; }
+
+    /// <summary>
+    /// True if all necessary settings data is retrieved
+    /// </summary>
+    private bool Initialized { get; set; } 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-            return;
+        if (firstRender)
+        {
+            // connect to bridge
+            callback = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
 
-        // connect to bridge
-        callback = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
-
-        StateHasChanged();
+            StateHasChanged(); 
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         await JS.InvokeVoidAsync(JSFUNC_CLOSE);
         callback?.Dispose();
+    }
+
+    [JSInvokable]
+    public Task OnBridgeConnected()
+    {
+        _ = RequestDefaultHostApi();
+        return InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -244,6 +278,11 @@
         {
             case HostApisResponse.OPCODE:
                 HostApisResponse apis = (HostApisResponse) response;
+                HostApis = apis.HostApis;
+                if (!Initialized)
+                {
+                    HostApiSelection = apis.HostApis.First().Key;
+                } 
                 foreach (var api in apis.HostApis)
                 {
                     Console.WriteLine($"Response: {api.Key}, {api.Value}");
@@ -252,6 +291,21 @@
 
             case DeviceIdsResponse.OPCODE:
                 DeviceIdsResponse devices = (DeviceIdsResponse) response;
+                Devices = devices.Devices;
+                if (Settings.DeviceIn == -1 || Settings.DeviceOut == -1)
+                {
+                    Settings.DeviceIn = HostApis[Settings.HostApi].DefaultInDevice;
+                    Settings.DeviceOut = HostApis[Settings.HostApi].DefaultOutDevice;
+
+                    // TODO: Is it the sample rate of the in device or out device that we want?
+                    Settings.SampleRate = Devices[Settings.DeviceIn].SampleRate;
+                }
+                if (!Initialized)
+                {
+                    Console.WriteLine("Initialized");
+                    Initialized = true;
+                    _ = RequestHostApis();
+                }
                 foreach (var device in devices.Devices)
                 {
                     Console.WriteLine($"Response: {device.Key}, {device.Value.Name}");
@@ -266,13 +320,35 @@
 
     private void ToggleSettings()
     {
-        IsSettingsOpen = !IsSettingsOpen;
+        if (SettingsOpen)
+        {
+            SendSettings();
+        } 
+        SettingsOpen = !SettingsOpen;
+    }
 
-        
-        // DEBUG: request some things
-        _ = RequestDefaultHostApi();
-        _ = RequestHostApis();
-        _ = RequestDeviceIds();
+    private int MaxChannelIn() 
+    {
+        try
+        {
+            return Devices[Settings.DeviceIn].MaxInChannel;
+        } 
+        catch (KeyNotFoundException)
+        {
+            return 0;   
+        }
+    }
+
+    private int MaxChannelOut()
+    {
+        try
+        {
+            return Devices[Settings.DeviceOut].MaxInChannel;
+        } 
+        catch (KeyNotFoundException)
+        {
+            return 0;   
+        }
     }
 
     private void CaptureDials()

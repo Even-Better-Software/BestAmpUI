@@ -12,6 +12,7 @@ window.tcpClient = {
 
         this.sock.onopen = () => {
             console.log("Connected to local bridge");
+            this.dotNetObject.invokeMethodAsync("OnBridgeConnected");
         };
 
         this.sock.onmessage = event => {
