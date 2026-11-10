@@ -1,0 +1,76 @@
+﻿main {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    padding: 1rem 1.5rem;
+}
+
+h1 {
+    margin: 0 0 1rem;
+    text-align: center;
+}
+
+.control-row {
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: clamp(0.5rem, 3vw, 2rem);
+}
+
+.control-item {
+    display: flex;
+    width: min(14vw, 7rem);
+    min-width: 3.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.control-label {
+    font-weight: 600;
+}
+
+.control-input {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.control-input img {
+    width: min(100%, 6rem);
+}
+
+.control-input input {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.settings-panel {
+    display: grid;
+    max-width: 60rem;
+    margin: 1.25rem auto 0;
+    gap: 0.6rem;
+}
+
+.settings-row {
+    display: grid;
+    grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 2fr) minmax(9rem, 1fr) minmax(10rem, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    text-align: end;
+}
+
+.settings-row select, .settings-row input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.extend-to-end input, .extend-to-end select {
+    grid-column: 2 / -1;
+}
