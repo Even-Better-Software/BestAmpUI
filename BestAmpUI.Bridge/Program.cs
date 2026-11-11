@@ -93,6 +93,8 @@ app.Map(ENDPOINT_BACKEND, async context =>
     {
         // this happens on a disconnect
         Console.Out.WriteLine("Connection closed cleanly.");
+        browserToTcp.Dispose();
+        tcpToBrowser.Dispose();
     }
     finally
     {

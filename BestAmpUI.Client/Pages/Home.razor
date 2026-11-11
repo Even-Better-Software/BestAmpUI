@@ -2,91 +2,110 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject HttpClient HTTP
-@using System.Text
+@using System.Net.Http.Json
+@using System.Text.Json
 @using BestAmpUI.Client.Models
 
 <main>
-    <header>
-        <h1>BestAmp Control Interface</h1>
+<header>
+    <h1>BestAmp Control Interface</h1>
 
-        <div class="control-row">
-            @foreach (DialKnob dial in DialKnobs)
-            {
-                <div class="control-item">
-                    <span class="control-label">@dial.Label</span>
-                    <span class="control-input">
-                        <img src="@DIAL_ICON" alt="Dial" />
-                        <input type="number" step="any" @bind="dial.Value" @bind:after="SendDials" />
-                    </span>
-                </div>
-            }
-
+    <div class="control-row">
+        @foreach (DialKnob dial in DialKnobs)
+        {
             <div class="control-item">
-                <span class="control-label">Settings</span>
+                <span class="control-label">@dial.Label</span>
                 <span class="control-input">
-                    <img src="@SETTINGS_ICON" alt="Settings" />
-                    @{string buttonLabel = SettingsOpen ? "Save" : "Open";}
-                    <input type="button" @onclick="ToggleSettings" value=@buttonLabel>
-                        @if (SettingsOpen) {<span>v</span>} else {<span>^</span>}
-                    </input>
+                    <img src="@DIAL_ICON" alt="Dial" />
+                    <input type="number" step="any" 
+                        disabled="@(!Initialized)" @bind="dial.Value" @bind:after="SendDials" 
+                    />
                 </span>
             </div>
-        </div>
-
-        @if (SettingsOpen)
-        {
-            <section class="settings-panel">
-                <div class="settings-row extend-to-end">
-                    <label for="hostApi">Host API</label>
-                    <select id="hostApi" @bind=HostApiSelection>
-                        @foreach (var hostApi in HostApis)
-                        {
-                            <option value=@hostApi.Key>@hostApi.Value.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="settings-row">
-                    <label for="deviceIn">In Device</label>
-                    <select id="deviceIn" @bind="Settings.DeviceIn">
-                        @foreach (var device in Devices)
-                        {
-                            <option value=@device.Key>@device.Value.Name</option>
-                        }
-                    </select>
-                    <label for="channelIn">In Channel Number</label>
-                    <input id="channelIn" type="number" min=0 max=@MaxChannelIn() @bind="Settings.ChannelIn" />
-                </div>
-                <div class="settings-row">
-                    <label for="deviceOut">Out device</label>
-                    <select id="deviceOut" @bind="Settings.DeviceOut">
-                        @foreach (var device in Devices)
-                        {
-                            <option value=@device.Key>@device.Value.Name</option>
-                        }
-                    </select>
-                    <label for="channelOut">Out Channel Number</label>
-                    <input id="channelOut" type="number" min=0 max=@MaxChannelOut() @bind="Settings.ChannelOut" />
-                </div>
-                <div class="settings-row extend-to-end">
-                    <label for="sampleRate">Sample Rate (in Hz)</label>
-                    <input id="sampleRate" type="number" @bind="Settings.SampleRate" />
-                </div>
-                <div class="settings-row extend-to-end">
-                    
-                    <label for="framesPerBuffer">Frames per buffer</label>
-                    <select id="framesPerBuffer" @bind="Settings.FramesPerBuffer">
-                        <option value=0>0</option>
-                        @for (int exp = 1; exp <= 9; exp++)
-                        {
-                            <option>@Math.Pow(2, exp)</option>
-                        }
-                    </select>
-                </div>
-            </section>
         }
-    </header>
 
-    <section class="amplifier-workspace" aria-label="Amplifier workspace"></section>
+        <div class="control-item">
+            <span class="control-label">Settings</span>
+            <span class="control-input">
+                <img src="@SETTINGS_ICON" alt="Settings" />
+                @{ string buttonLabel = SettingsOpen ? "Save" : "Open"; }
+                <input type="button" 
+                    disabled="@(!Initialized)" @onclick="ToggleSettings" value=@buttonLabel
+                />
+            </span>
+        </div>
+    </div>
+
+    @if (SettingsOpen)
+    {
+        <section class="settings-panel">
+            <div class="settings-row extend-to-end">
+                <label for="hostApi">Host API</label>
+                <select id="hostApi" 
+                    disabled="@(!Initialized)" @bind="Settings.HostApi" @bind:after="OnHostApiChanged"
+                >
+                    @foreach (var hostApi in HostApis)
+                    {
+                        <option value=@hostApi.Key>@hostApi.Value.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="deviceIn">In Device</label>
+                <select id="deviceIn" 
+                    disabled="@(!Initialized)" @bind="Settings.DeviceIn" @bind:after="SavePreferences"
+                >
+                    @foreach (var device in Devices)
+                    {
+                        <option value=@device.Key>@device.Value.Name</option>
+                    }
+                </select>
+                <label for="channelIn">In Channel Number</label>
+                <input id="channelIn" type="number" min=0 max=@MaxChannelIn() 
+                    disabled="@(!Initialized)" @bind="Settings.ChannelIn" @bind:after="SavePreferences" 
+                />
+            </div>
+            <div class="settings-row">
+                <label for="deviceOut">Out device</label>
+                <select id="deviceOut" 
+                    disabled="@(!Initialized)" @bind="Settings.DeviceOut" @bind:after="SavePreferences"
+                >
+                    @foreach (var device in Devices)
+                    {
+                        <option value=@device.Key>@device.Value.Name</option>
+                    }
+                </select>
+                <label for="channelOut">Out Channel Number</label>
+                <input id="channelOut" type="number" min=0 max=@MaxChannelOut() 
+                    disabled="@(!Initialized)" @bind="Settings.ChannelOut" @bind:after="SavePreferences"
+                />
+            </div>
+            <div class="settings-row extend-to-end">
+                <label for="sampleRate">Sample Rate (in Hz)</label>
+                <input id="sampleRate" type="number" 
+                    disabled="@(!Initialized)" @bind="Settings.SampleRate" @bind:after="SavePreferences"
+                />
+            </div>
+            <div class="settings-row extend-to-end">
+                
+                <label for="framesPerBuffer">Frames per buffer</label>
+                <select id="framesPerBuffer" 
+                    disabled="@(!Initialized)" @bind="Settings.FramesPerBuffer" @bind:after="SavePreferences"
+                >
+                    <option value=0>0</option>
+                    @for (int exp = 1; exp <= 9; exp++)
+                    {
+                        <option>@Math.Pow(2, exp)</option>
+                    }
+                </select>
+            </div>
+        </section>
+    }
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p role="alert">@ErrorMessage</p>
+    }
+</header>
 </main>
 
 @code {
@@ -98,7 +117,6 @@
     // File Paths
     private const string DIAL_ICON = "dial.png";
     private const string SETTINGS_ICON = "amp2.png";
-    private const string DATA = "data.bestamp";
 
     // Function Names From JS Environment
     private const string JSFUNC_CONNECT = "tcpClient.connect";
@@ -107,8 +125,11 @@
 
     // Endpoints
     private const string BRIDGE_ENDPOINT = "ws://127.0.0.1:7081/backend";
+    private const string PREFS_ENDPOINT = "http://127.0.0.1:7081/prefs";
 
     // Hardcoded Data
+    private const int DEFAULT_FRAMES_PER_BUFFER = 32;
+    private const int DEFAULT_SAMPLE_FORMAT = 0;
     private static readonly DialKnob[] DialKnobs =
     [
         new("Voice"),
@@ -117,31 +138,28 @@
         new("Bass"),
         new("Treble")
     ];
-
     private static Dictionary<int, Func<byte[], Response>> OpcodeToResponse = new()
     {
         { UpdatePrefsResponse.OPCODE, (msg) => new UpdatePrefsResponse(msg) },
-        { UpdateAmpValuesResponse.OPCODE, (msg) => new UpdateAmpValuesResponse(msg)},
         { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
         { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
+        { UpdateAmpValuesResponse.OPCODE, (msg) => new UpdateAmpValuesResponse(msg) },
+        { OkResponse.OPCODE, (msg) => new OkResponse(msg) },
+        { BadResponse.OPCODE, (msg) => new BadResponse(msg) },
     };
 
     // Properties
     private UpdateAmpValuesRequest Dials { get; set; } = new();
     private UpdatePrefsRequest Settings { get; set; } = new();
-    private int HostApiSelection {
-        get => Settings.HostApi;
-        set
-        {
-            Settings.HostApi = value;
-            _ = RequestDeviceIds();
-            Settings.DeviceIn = -1;
-            Settings.DeviceOut = -1;
-        }
-    }
-
+    private UserPrefs? UserPrefs { get; set; }
     private Dictionary<int, HostApiInfo> HostApis = [];
     private Dictionary<int, DeviceInfo> Devices = [];
+    private readonly SemaphoreSlim _preferencesSaveLock = new(1, 1);
+
+    /// <summary>
+    /// Used to display any errors
+    /// </summary>
+    private string? ErrorMessage;
 
     /// <summary>
     /// Controls if the settings section is being shown
@@ -150,8 +168,14 @@
 
     /// <summary>
     /// True if all necessary settings data is retrieved
-    /// </summary>
+    /// </summary> 
     private bool Initialized { get; set; } 
+
+    /// <summary>
+    /// True if BestAmp already provided a default host API
+    /// </summary>
+    private bool ReceivedDefaultHostApi { get; set; }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -160,15 +184,6 @@
             // connect to bridge
             callback = DotNetObjectReference.Create(this);
             _ = JS.InvokeVoidAsync(JSFUNC_CONNECT, BRIDGE_ENDPOINT, callback);
-
-            // check stored data
-            byte[] data = await HTTP.GetByteArrayAsync(DATA, CancellationToken.None);
-            Console.Write("Stored data: ");
-            foreach (byte character in data)
-            {
-                Console.Write((char)character);
-            }
-            Console.WriteLine();
 
             StateHasChanged(); 
         }
@@ -181,14 +196,15 @@
     }
 
     [JSInvokable]
-    public Task OnBridgeConnected()
+    public async Task OnBridgeConnected()
     {
-        _ = RequestDefaultHostApi();
-        return InvokeAsync(StateHasChanged);
+        await LoadPreferences();
+        await RequestDefaultHostApi();
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
-    public Task OnTcpMessage(byte[] message)
+    public async Task OnTcpMessage(byte[] message)
     {   
         int opcode = Response.OpcodeFromMessage(message);
 
@@ -196,23 +212,97 @@
         try
         {
             response = OpcodeToResponse[opcode](message);
-            HandleResponse(response, opcode);
+            await HandleResponse(response, opcode);
         } 
         catch (KeyNotFoundException)
         {
             Console.WriteLine($"Unknown opcode {opcode}");
         }
 
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleResponse(Response response, int opcode)
+    private async Task HandleResponse(Response response, int opcode)
     {
         Console.WriteLine($"Received message with opcode {opcode}");
         switch (opcode)
         {
-            case UpdateAmpValuesResponse.OPCODE:
-                Console.WriteLine("Updated amp values successfully!");
+            case HostApisResponse.OPCODE:
+                Dictionary<int, HostApiInfo> availableApis = ((HostApisResponse)response).HostApis;
+
+                if (availableApis.Count == 0)
+                {
+                    ErrorMessage = "BestAmp did not detect any host APIs.";
+                    break;
+                }
+
+                HostApis = availableApis;
+
+                if (!ReceivedDefaultHostApi)
+                {
+                    ReceivedDefaultHostApi = true;
+                    Settings.HostApi = HostApis.Keys.First();
+                    await RequestHostApis();
+                    break;
+                }
+
+                int? _savedHostApi = UserPrefs?.Settings?.HostApi;
+                if (_savedHostApi is int savedHostApi && HostApis.ContainsKey(savedHostApi))
+                {
+                    Settings.HostApi = savedHostApi;
+                }
+                else if (!HostApis.ContainsKey(Settings.HostApi))
+                {
+                    ReceivedDefaultHostApi = false;
+                    Initialized = false;
+                    await RequestDefaultHostApi();
+                    break;    
+                }
+
+                if (!Initialized)
+                {
+                    await RequestDeviceIds();
+                }
+
+                break;
+
+            case DeviceIdsResponse.OPCODE:
+                Dictionary<int, DeviceInfo> availableDevices = ((DeviceIdsResponse)response).Devices;
+
+                Devices = availableDevices;
+
+                HostApiInfo apiInfo;
+                try
+                {
+                    apiInfo = HostApis[Settings.HostApi];
+                }
+                catch (KeyNotFoundException)
+                {
+                    ErrorMessage = "Selected Host API became unavailable mid operation.";
+                    break;
+                }
+
+                Settings.DeviceIn = apiInfo.DefaultInDevice;
+                Settings.DeviceOut = apiInfo.DefaultOutDevice;
+                Settings.ChannelIn = MaxChannelIn();
+                Settings.ChannelOut = MaxChannelOut();
+                Settings.SampleRate = Devices[Settings.DeviceIn].SampleRate;
+                Settings.FramesPerBuffer = DEFAULT_FRAMES_PER_BUFFER; // TODO: find a good default
+                Settings.SampleFormat = DEFAULT_SAMPLE_FORMAT; // TODO: still confused on what this is
+
+                if (UserPrefs?.Settings is UpdatePrefsRequest saved)
+                {
+                    Settings.DeviceIn = Devices.ContainsKey(saved.DeviceIn) ? saved.DeviceIn : Settings.DeviceIn;
+                    Settings.DeviceOut = Devices.ContainsKey(saved.DeviceOut) ? saved.DeviceOut : Settings.DeviceOut;
+                    Settings.ChannelIn = saved.ChannelIn <= MaxChannelIn() ? saved.ChannelIn : Settings.ChannelIn;
+                    Settings.ChannelOut = saved.ChannelOut <= MaxChannelOut() ? saved.ChannelOut : Settings.ChannelOut;
+                    Settings.SampleRate = saved.DeviceIn == Settings.DeviceIn ? saved.SampleRate : Settings.SampleRate;
+                    Settings.FramesPerBuffer = saved.FramesPerBuffer >= 0 ? saved.FramesPerBuffer : Settings.FramesPerBuffer;
+                    @* Settings.SampleFormat = saved.SampleFormat; *@
+                }
+
+                Initialized = true;
+                await SavePreferences();
                 break;
 
             case UpdatePrefsResponse.OPCODE:
@@ -222,55 +312,45 @@
                 );
                 break;
 
-            case HostApisResponse.OPCODE:
-                HostApisResponse apis = (HostApisResponse) response;
-                HostApis = apis.HostApis;
-                if (!Initialized)
-                {
-                    HostApiSelection = apis.HostApis.First().Key;
-                } 
-                foreach (var api in apis.HostApis)
-                {
-                    Console.WriteLine($"Response: {api.Key}, {api.Value}");
-                }
+            case OkResponse.OPCODE:
                 break;
 
-            case DeviceIdsResponse.OPCODE:
-                DeviceIdsResponse devices = (DeviceIdsResponse) response;
-                Devices = devices.Devices;
-                if (Settings.DeviceIn == -1 || Settings.DeviceOut == -1)
-                {
-                    Settings.DeviceIn = HostApis[Settings.HostApi].DefaultInDevice;
-                    Settings.DeviceOut = HostApis[Settings.HostApi].DefaultOutDevice;
+            case BadResponse.OPCODE:
+                Console.WriteLine("Server replied with generic error.");
+                break;
 
-                    // TODO: Is it the sample rate of the in device or out device that we want?
-                    Settings.SampleRate = Devices[Settings.DeviceIn].SampleRate;
-                }
-                if (!Initialized)
-                {
-                    Console.WriteLine("Initialized");
-                    Initialized = true;
-                    _ = RequestHostApis();
-                }
-                foreach (var device in devices.Devices)
-                {
-                    Console.WriteLine($"Response: {device.Key}, {device.Value.Name}");
-                }
+            case UpdateAmpValuesResponse.OPCODE:
+                Console.WriteLine("Updated amp values successfully!");
                 break;
 
             default:
                 Console.WriteLine($"Handler for opcode {opcode} not found.");
-                break;   
+                break;
         }
     }
 
-    private void ToggleSettings()
+    private async Task OnHostApiChanged()
+    {
+        if (!Initialized)
+        {
+            return;
+        }
+
+        Settings.DeviceIn = -1;
+        Settings.DeviceOut = -1;
+        await RequestDeviceIds();
+    }
+
+    private async Task ToggleSettings()
     {
         if (SettingsOpen)
         {
-            _ = SendSettings();
+            await SendSettings();
+            SettingsOpen = false;
+            return;
         } 
-        SettingsOpen = !SettingsOpen;
+
+        SettingsOpen = true;
     }
 
     private int MaxChannelIn() 
@@ -289,7 +369,7 @@
     {
         try
         {
-            return Devices[Settings.DeviceOut].MaxInChannel;
+            return Devices[Settings.DeviceOut].MaxOutChannel;
         } 
         catch (KeyNotFoundException)
         {
@@ -306,15 +386,85 @@
         Dials.Treble = DialKnobs[4].Value;
     }
 
-    private async Task SendSettings()
+    private void LoadDials()
     {
-        await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMsg());
+        DialKnobs[0].Value = Dials.Voice;
+        DialKnobs[1].Value = Dials.Gain;
+        DialKnobs[2].Value = Dials.Volume;
+        DialKnobs[3].Value = Dials.Bass;
+        DialKnobs[4].Value = Dials.Treble;
     }
 
     private async Task SendDials()
     {
         CaptureDials();
+        await SavePreferences();
         await JS.InvokeVoidAsync(JSFUNC_SEND, Dials.BuildMsg());
+    }
+
+    private async Task SendSettings()
+    {
+        await SavePreferences();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, Settings.BuildMsg());
+    }
+
+    private async Task LoadPreferences()
+    {
+        using HttpResponseMessage httpMsg = await HTTP.GetAsync(PREFS_ENDPOINT);
+        if (httpMsg.StatusCode == System.Net.HttpStatusCode.NotFound || !httpMsg.IsSuccessStatusCode)
+        {
+            Console.WriteLine("User preferences unavailable.");
+            UserPrefs = null;
+            return;
+        }
+
+        try
+        {
+            UserPrefs = await httpMsg.Content.ReadFromJsonAsync<UserPrefs>();
+        }
+        catch (JsonException err)
+        {
+            ErrorMessage = "Problem parsing user preferences"; 
+            Console.Error.WriteLine(err.Message);
+        }
+        
+        if (UserPrefs?.Dials is UpdateAmpValuesRequest saved)
+        {
+            Dials = saved;
+            LoadDials();
+        }
+    }
+
+    private async Task SavePreferences()
+    {
+        await _preferencesSaveLock.WaitAsync();
+        try
+        {
+            UserPrefs preferences = new()
+            {
+                Settings = Settings,
+                Dials = Dials
+            };
+
+            using HttpResponseMessage response =
+                await HTTP.PutAsJsonAsync(PREFS_ENDPOINT, preferences);
+            response.EnsureSuccessStatusCode();
+            ErrorMessage = null;
+        }
+        catch (HttpRequestException err)
+        {
+            ErrorMessage = $"Preferences could not be saved.";
+            Console.WriteLine(err.Message);
+        }
+        catch (JsonException err)
+        {
+            ErrorMessage = $"Preferences could not be saved.";
+            Console.WriteLine(err.Message);
+        }
+        finally
+        {
+            _preferencesSaveLock.Release();
+        }
     }
 
     private async Task RequestDefaultHostApi()
