@@ -17,9 +17,22 @@
                 <span class="control-label">@dial.Label</span>
                 <span class="control-input">
                     <img src="@DIAL_ICON" alt="Dial" />
-                    <input type="number" step="any" 
-                        disabled="@(!Initialized)" @bind="dial.Value" @bind:after="SendDials" 
-                    />
+                    @if (dial.Label == "Voice")
+                    {
+                        <select id="@dial.Label" 
+                            disabled="@(!Initialized)" @bind=dial.Value @bind:after="SendDials"
+                        >
+                            @foreach (var voice in Voices)
+                            {
+                                <option value=@voice.Key>@voice.Value</option>
+                            }
+                        </select>
+                    } else
+                    {
+                        <input id="@dial.Label" type="number" step="any" 
+                            disabled="@(!Initialized)" @bind="dial.Value" @bind:after="SendDials" 
+                        />  
+                    }
                 </span>
             </div>
         }
@@ -144,6 +157,7 @@
         { HostApisResponse.OPCODE, (msg) => new HostApisResponse(msg) },
         { DeviceIdsResponse.OPCODE, (msg) => new DeviceIdsResponse(msg) },
         { UpdateAmpValuesResponse.OPCODE, (msg) => new UpdateAmpValuesResponse(msg) },
+        { VoicesResponse.OPCODE, (msg) => new VoicesResponse(msg) },
         { OkResponse.OPCODE, (msg) => new OkResponse(msg) },
         { BadResponse.OPCODE, (msg) => new BadResponse(msg) },
     };
@@ -152,8 +166,11 @@
     private UpdateAmpValuesRequest Dials { get; set; } = new();
     private UpdatePrefsRequest Settings { get; set; } = new();
     private UserPrefs? UserPrefs { get; set; }
+    private Dictionary<int, string> Voices = [];
     private Dictionary<int, HostApiInfo> HostApis = [];
     private Dictionary<int, DeviceInfo> Devices = [];
+
+    // might not need this
     private readonly SemaphoreSlim _preferencesSaveLock = new(1, 1);
 
     /// <summary>
@@ -175,7 +192,6 @@
     /// True if BestAmp already provided a default host API
     /// </summary>
     private bool ReceivedDefaultHostApi { get; set; }
-
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -199,6 +215,7 @@
     public async Task OnBridgeConnected()
     {
         await LoadPreferences();
+        await RequestVoices();
         await RequestDefaultHostApi();
         await InvokeAsync(StateHasChanged);
     }
@@ -298,11 +315,15 @@
                     Settings.ChannelOut = saved.ChannelOut <= MaxChannelOut() ? saved.ChannelOut : Settings.ChannelOut;
                     Settings.SampleRate = saved.DeviceIn == Settings.DeviceIn ? saved.SampleRate : Settings.SampleRate;
                     Settings.FramesPerBuffer = saved.FramesPerBuffer >= 0 ? saved.FramesPerBuffer : Settings.FramesPerBuffer;
-                    @* Settings.SampleFormat = saved.SampleFormat; *@
+                    @* Settings.SampleFormat = saved.SampleFormat; *@ // TODO: still confused on what this is
                 }
 
                 Initialized = true;
                 await SavePreferences();
+                break;
+
+            case VoicesResponse.OPCODE:
+                Voices = ((VoicesResponse)response).VoicesIdToName;
                 break;
 
             case UpdatePrefsResponse.OPCODE:
@@ -483,6 +504,12 @@
     private async Task RequestHostApis()
     {
         HostApisRequest request = new();
+        await JS.InvokeVoidAsync(JSFUNC_SEND, request.BuildMsg());
+    }
+
+    private async Task RequestVoices()
+    {
+        VoicesRequest request = new();
         await JS.InvokeVoidAsync(JSFUNC_SEND, request.BuildMsg());
     }
 

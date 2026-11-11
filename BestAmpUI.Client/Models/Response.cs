@@ -28,6 +28,10 @@ public abstract class Response
 
         for (int i = 0; i < STRING_LENGTH; i++)
         {
+            if (asciiString[i] == 0)
+            {
+                continue;
+            }
             builder.Append((char)asciiString[i]);
         }
 
