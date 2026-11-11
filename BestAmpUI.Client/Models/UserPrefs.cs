@@ -9,4 +9,7 @@ public class UserPrefs
 
     public UpdatePrefsRequest? Settings { get; set; }
     public UpdateAmpValuesRequest? Dials { get; set; }
+    public Dictionary<string, UpdateAmpValuesRequest> Profiles { get; set; } = new() {
+        { "Default", new UpdateAmpValuesRequest() },
+    };
 }
