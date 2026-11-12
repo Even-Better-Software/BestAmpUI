@@ -4,7 +4,7 @@ public class UpdateAmpValuesRequest : Request
 {
     private const int OPCODE = 2;
     private const int CONTENT_LENGTH = 5 * sizeof(int);
-    public int Voice { get; set; } = 10;
+    public int Voice { get; set; } = 0;
     public int Gain { get; set; } = 10;
     public int Volume { get; set; } = 10;
     public int Bass { get; set; } = 10;

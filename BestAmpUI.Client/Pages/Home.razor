@@ -29,7 +29,7 @@
                         </select>
                     } else
                     {
-                        <input id="@dial.Label" type="number" step="any" 
+                        <input id="@dial.Label" type="number" step="any" min="0"
                             disabled="@(!Initialized)" @bind="dial.Value" @bind:after="SendDials" 
                         />  
                     }
@@ -119,6 +119,23 @@
         <p role="alert">@ErrorMessage</p>
     }
 </header>
+
+<body class="profile-select">
+    <h2>Profile</h2>
+    <div>
+        <select id="currentProfile" 
+            disabled="@(!Initialized)" @bind="CurrentProfile" @bind:after="OnProfileChanged"
+        >
+            @foreach (var profile in Profiles)
+            {
+                <option value=@profile.Key>@profile.Key</option>
+            }
+        </select>
+        <input id="profileName" type="text" maxlength="32" size="16" @bind="ProfileNameInput"/>
+        <button @onclick="OnSaveProfile">Save</button>
+    </div>
+</body>
+
 </main>
 
 @code {
@@ -166,12 +183,15 @@
     private UpdateAmpValuesRequest Dials { get; set; } = new();
     private UpdatePrefsRequest Settings { get; set; } = new();
     private UserPrefs? UserPrefs { get; set; }
-    private Dictionary<int, string> Voices = [];
-    private Dictionary<int, HostApiInfo> HostApis = [];
-    private Dictionary<int, DeviceInfo> Devices = [];
-
-    // might not need this
-    private readonly SemaphoreSlim _preferencesSaveLock = new(1, 1);
+    private Dictionary<int, string> Voices { get; set; } = [];
+    private Dictionary<int, HostApiInfo> HostApis { get; set; } = [];
+    private Dictionary<int, DeviceInfo> Devices { get; set; }= [];
+    private string CurrentProfile { get; set; } = UserPrefs.DEFAULT;
+    private Dictionary<string, UpdateAmpValuesRequest> Profiles { get; set; } = new ()
+    {
+        { UserPrefs.DEFAULT, new UpdateAmpValuesRequest() }       
+    };
+    private string ProfileNameInput { get; set; } = UserPrefs.DEFAULT;
 
     /// <summary>
     /// Used to display any errors
@@ -214,6 +234,7 @@
     [JSInvokable]
     public async Task OnBridgeConnected()
     {
+        LoadDials();
         await LoadPreferences();
         await RequestVoices();
         await RequestDefaultHostApi();
@@ -315,7 +336,8 @@
                     Settings.ChannelOut = saved.ChannelOut <= MaxChannelOut() ? saved.ChannelOut : Settings.ChannelOut;
                     Settings.SampleRate = saved.DeviceIn == Settings.DeviceIn ? saved.SampleRate : Settings.SampleRate;
                     Settings.FramesPerBuffer = saved.FramesPerBuffer >= 0 ? saved.FramesPerBuffer : Settings.FramesPerBuffer;
-                    @* Settings.SampleFormat = saved.SampleFormat; *@ // TODO: still confused on what this is
+                    @* Settings.SampleFormat = saved.SampleFormat; *@
+                    // TODO: still confused on what this is
                 }
 
                 Initialized = true;
@@ -360,6 +382,20 @@
         Settings.DeviceIn = -1;
         Settings.DeviceOut = -1;
         await RequestDeviceIds();
+    }
+
+    private async Task OnProfileChanged()
+    {
+        ProfileNameInput = CurrentProfile;
+        Dials = Profiles[CurrentProfile];
+        LoadDials();
+        await SavePreferences();
+    }
+
+    private void OnSaveProfile()
+    {
+        Profiles[ProfileNameInput] = Dials;
+        CurrentProfile = ProfileNameInput;
     }
 
     private async Task ToggleSettings()
@@ -447,44 +483,44 @@
         {
             ErrorMessage = "Problem parsing user preferences"; 
             Console.Error.WriteLine(err.Message);
+            return;
+        }
+
+        try
+        {
+            Dials = UserPrefs!.Profiles[UserPrefs.CurrentProfile];
+        }
+        catch (KeyNotFoundException)
+        {
+            Dials = UserPrefs!.Profiles[UserPrefs.DEFAULT];
         }
         
-        if (UserPrefs?.Dials is UpdateAmpValuesRequest saved)
-        {
-            Dials = saved;
-            LoadDials();
-        }
+        LoadDials();
     }
 
     private async Task SavePreferences()
     {
-        await _preferencesSaveLock.WaitAsync();
         try
         {
             UserPrefs preferences = new()
             {
                 Settings = Settings,
-                Dials = Dials
+                Profiles = Profiles,
+                CurrentProfile = CurrentProfile,
             };
-
-            using HttpResponseMessage response =
-                await HTTP.PutAsJsonAsync(PREFS_ENDPOINT, preferences);
-            response.EnsureSuccessStatusCode();
+            using HttpResponseMessage response = await HTTP.PutAsJsonAsync(PREFS_ENDPOINT, preferences);
+            response.EnsureSuccessStatusCode(); // may throw HttpRequestException
             ErrorMessage = null;
         }
         catch (HttpRequestException err)
         {
             ErrorMessage = $"Preferences could not be saved.";
-            Console.WriteLine(err.Message);
+            Console.WriteLine(err.Message); 
         }
         catch (JsonException err)
         {
             ErrorMessage = $"Preferences could not be saved.";
             Console.WriteLine(err.Message);
-        }
-        finally
-        {
-            _preferencesSaveLock.Release();
         }
     }
 
