@@ -29,7 +29,7 @@
                         </select>
                     } else
                     {
-                        <input id="@dial.Label" type="number" step="any" min="0"
+                        <input id="@dial.Label" type="number" step="any" min=0 max=10
                             disabled="@(!Initialized)" @bind="dial.Value" @bind:after="SendDials" 
                         />  
                     }
